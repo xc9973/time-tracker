@@ -2,28 +2,12 @@
 package main
 
 import (
-	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"log"
-	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"strings"
 	"syscall"
-	"time"
 
 	"time-tracker/internal/app"
-	"time-tracker/internal/handler"
-
-	"time-tracker/internal/shared/auth"
-	"time-tracker/internal/shared/database"
-	"time-tracker/internal/shared/middleware"
-	"time-tracker/internal/sessions"
-	"time-tracker/internal/shared/health"
-	"time-tracker/internal/tags"
-	"time-tracker/internal/web"
 )
 
 // logStartup logs startup information without exposing sensitive values.
@@ -57,167 +41,26 @@ func main() {
 	// Log startup info (without sensitive values)
 	logStartup(cfg)
 
-	// Parse timezone
-	tz, err := time.LoadLocation(cfg.Timezone)
+	// Create and wire application
+	a, err := app.New(cfg)
 	if err != nil {
-		log.Fatalf("Invalid timezone %s: %v", cfg.Timezone, err)
-	}
-
-	// Initialize database
-	db, err := database.New(cfg.DBPath)
-	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
-	}
-	defer db.Close()
-	log.Println("Database initialized successfully")
-
-	// Initialize repositories
-	sessionRepo := sessions.NewSessionRepository(db)
-
-	// Initialize services
-	sessionService := sessions.NewSessionService(sessionRepo)
-
-	// Initialize handlers
-	sessionsHandler := handler.NewSessionsHandler(sessionService)
-	tagsRepo := tags.NewTagRepository(db)
-	tagsService := tags.NewTagService(tagsRepo)
-	tagsHandler := tags.NewTagsHandler(tagsService)
-	healthHandler := health.NewHealthHandler()
-	absTemplates, err := filepath.Abs("templates")
-	if err != nil {
-		log.Fatalf("Failed to resolve templates path: %v", err)
-	}
-	webHandler, err := web.NewWebHandler(sessionService, absTemplates, tz, cfg.APIKey)
-	if err != nil {
-		log.Fatalf("Failed to initialize web handler: %v", err)
-	}
-
-	// Initialize rate limiter
-	rateLimiter := middleware.NewRateLimiter(cfg.RateLimit)
-
-	// Create main router
-	mux := http.NewServeMux()
-
-	nonceMiddleware := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			nonceBytes := make([]byte, 16)
-			if _, err := rand.Read(nonceBytes); err != nil {
-				http.Error(w, "failed to generate nonce", http.StatusInternalServerError)
-				return
-			}
-			nonce := base64.StdEncoding.EncodeToString(nonceBytes)
-			ctx := context.WithValue(r.Context(), middleware.CSPNonceKey{}, nonce)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
-
-	// Health endpoint (no authentication required)
-	mux.Handle("/healthz", healthHandler)
-
-	// API endpoints (require API key authentication)
-	apiHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-
-		switch {
-		// Session-tags association endpoints go to tags handler
-		case strings.HasPrefix(path, "/api/v1/sessions/") && (strings.HasSuffix(path, "/tags") || strings.Contains(path, "/tags/")):
-			tagsHandler.ServeHTTP(w, r)
-		// Other sessions endpoints
-		case strings.HasPrefix(path, "/api/v1/sessions"):
-			sessionsHandler.ServeHTTP(w, r)
-		// Tags endpoints
-		case strings.HasPrefix(path, "/api/v1/tags"):
-			tagsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
-
-	// Apply API key middleware to API routes (also allow Basic Auth for web interface)
-	mux.Handle("/api/", auth.APIKeyMiddleware(cfg.APIKey, cfg.BasicUser, cfg.BasicPass)(apiHandler))
-
-	// Web endpoints (require Basic Auth if configured)
-	webMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		webHandler.ServeHTTP(w, r)
-	})
-
-	// CSV export endpoints (also require Basic Auth if configured)
-	csvHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
-		switch path {
-		case "/sessions.csv":
-			sessionsHandler.ExportCSV(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
-
-	// Apply Basic Auth middleware if credentials are configured
-	if cfg.BasicUser != "" && cfg.BasicPass != "" {
-		mux.Handle("/web/", auth.BasicAuthMiddleware(cfg.BasicUser, cfg.BasicPass)(webMux))
-		mux.Handle("/sessions.csv", auth.BasicAuthMiddleware(cfg.BasicUser, cfg.BasicPass)(csvHandler))
-	} else {
-		mux.Handle("/web/", webMux)
-		mux.Handle("/sessions.csv", csvHandler)
-	}
-
-	// Redirect root path to /web/sessions
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			http.Redirect(w, r, "/web/sessions", http.StatusFound)
-			return
-		}
-		http.NotFound(w, r)
-	})
-
-	staticPath := filepath.Join(absTemplates, "static")
-	if _, err := os.Stat(staticPath); err == nil {
-		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticPath))))
-	}
-
-	// Apply global middleware chain
-	var finalHandler http.Handler = mux
-
-	// Apply rate limiting
-	finalHandler = middleware.RateLimitMiddleware(rateLimiter)(finalHandler)
-
-	// Apply nonce middleware before security headers
-	finalHandler = nonceMiddleware(finalHandler)
-
-	// Apply security headers
-	finalHandler = middleware.SecurityHeadersMiddleware(finalHandler)
-
-	// Start server
-	addr := ":" + cfg.Port
-	srv := &http.Server{
-		Addr:    addr,
-		Handler: finalHandler,
+		log.Fatalf("Failed to create app: %v", err)
 	}
 
 	// Start server in a goroutine
 	go func() {
-		log.Printf("Server listening on %s", addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := a.Run(); err != nil {
 			log.Fatalf("Server error: %v", err)
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server with
-	// a timeout of 10 seconds.
+	// Wait for interrupt signal to gracefully shutdown the server
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
 
-	// Stop rate limiter cleanup goroutine
-	rateLimiter.Stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+	// Shutdown the server
+	if err := a.Shutdown(); err != nil {
+		log.Fatalf("Shutdown error: %v", err)
 	}
-
-	log.Println("Server exited properly")
 }
