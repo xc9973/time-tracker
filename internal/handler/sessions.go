@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"time-tracker/internal/models"
-	"time-tracker/internal/service"
+	"time-tracker/internal/sessions"
+	"time-tracker/internal/sessions/models"
 
 	"time-tracker/internal/shared/config"
 	"time-tracker/internal/shared/errors"
@@ -18,11 +18,11 @@ import (
 
 // SessionsHandler handles HTTP requests for session operations.
 type SessionsHandler struct {
-	service *service.SessionService
+	service *sessions.SessionService
 }
 
 // NewSessionsHandler creates a new SessionsHandler.
-func NewSessionsHandler(svc *service.SessionService) *SessionsHandler {
+func NewSessionsHandler(svc *sessions.SessionService) *SessionsHandler {
 	return &SessionsHandler{service: svc}
 }
 
@@ -42,7 +42,7 @@ func (h *SessionsHandler) Start(w http.ResponseWriter, r *http.Request) {
 	session, err := h.service.StartSession(&input)
 	if err != nil {
 		// Check for conflict error (session already running)
-		if err == service.ErrSessionAlreadyRunning && session != nil {
+		if err == sessions.ErrSessionAlreadyRunning && session != nil {
 			conflictErr := errors.NewConflictError("A session is already running", map[string]interface{}{
 				"id":         session.ID,
 				"task":       session.Task,
@@ -84,7 +84,7 @@ func (h *SessionsHandler) Stop(w http.ResponseWriter, r *http.Request) {
 
 	session, err := h.service.StopSession(input)
 	if err != nil {
-		if err == service.ErrNoRunningSession {
+		if err == sessions.ErrNoRunningSession {
 			errors.WriteError(w, errors.NotFoundError("No running session found"))
 			return
 		}

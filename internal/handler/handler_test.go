@@ -9,9 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"time-tracker/internal/models"
-	"time-tracker/internal/repository"
-	"time-tracker/internal/service"
+	"time-tracker/internal/sessions"
+	"time-tracker/internal/sessions/models"
 	"time-tracker/internal/shared/database"
 	"time-tracker/internal/shared/errors"
 )
@@ -87,8 +86,8 @@ func TestHealthHandler_MethodNotAllowed(t *testing.T) {
 
 func setupSessionsHandler(t *testing.T) (*SessionsHandler, func()) {
 	db, cleanup := setupTestDB(t)
-	repo := repository.NewSessionRepository(db)
-	svc := service.NewSessionService(repo)
+	repo := sessions.NewSessionRepository(db)
+	svc := sessions.NewSessionService(repo)
 	handler := NewSessionsHandler(svc)
 	return handler, cleanup
 }
@@ -248,7 +247,7 @@ func TestSessionsHandler_Current(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", w.Code)
 	}
 
-	var resp service.CurrentSessionResponse
+	var resp sessions.CurrentSessionResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}

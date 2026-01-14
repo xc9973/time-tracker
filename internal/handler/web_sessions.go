@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"time-tracker/internal/models"
-	"time-tracker/internal/service"
+	"time-tracker/internal/sessions"
+	"time-tracker/internal/sessions/models"
 
 	"time-tracker/internal/shared/utils"
 	"time-tracker/internal/shared/validation"
@@ -137,7 +137,7 @@ func (h *WebHandler) WebStartSession(w http.ResponseWriter, r *http.Request) {
 
 	_, err := h.sessionService.StartSession(&startInput)
 	if err != nil {
-		if err == service.ErrSessionAlreadyRunning {
+		if err == sessions.ErrSessionAlreadyRunning {
 			http.Error(w, "Session already running", http.StatusConflict)
 			return
 		}
@@ -160,7 +160,7 @@ func (h *WebHandler) WebStopSession(w http.ResponseWriter, r *http.Request) {
 
 	_, err := h.sessionService.StopSession(stopInput)
 	if err != nil {
-		if err == service.ErrNoRunningSession {
+		if err == sessions.ErrNoRunningSession {
 			http.Error(w, "No running session found", http.StatusNotFound)
 			return
 		}

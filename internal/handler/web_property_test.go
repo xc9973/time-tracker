@@ -10,8 +10,7 @@ import (
 
 	"pgregory.net/rapid"
 
-	"time-tracker/internal/repository"
-	"time-tracker/internal/service"
+	"time-tracker/internal/sessions"
 	"time-tracker/internal/shared/auth"
 	"time-tracker/internal/shared/database"
 )
@@ -29,8 +28,8 @@ func setupWebTestEnv(t *testing.T) (*WebHandler, func()) {
 		os.Remove(tmpFile.Name())
 		t.Fatalf("failed to create database: %v", err)
 	}
-	sessionRepo := repository.NewSessionRepository(db)
-	sessionSvc := service.NewSessionService(sessionRepo)
+	sessionRepo := sessions.NewSessionRepository(db)
+	sessionSvc := sessions.NewSessionService(sessionRepo)
 	// Create templates directory for testing
 	tmpDir, err := os.MkdirTemp("", "templates_test")
 	if err != nil {

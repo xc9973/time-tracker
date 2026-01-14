@@ -21,8 +21,7 @@ import (
 	"time-tracker/internal/shared/auth"
 	"time-tracker/internal/shared/database"
 	"time-tracker/internal/shared/middleware"
-	"time-tracker/internal/repository"
-	"time-tracker/internal/service"
+	"time-tracker/internal/sessions"
 )
 
 // Config holds the application configuration loaded from environment variables.
@@ -128,10 +127,10 @@ func main() {
 	log.Println("Database initialized successfully")
 
 	// Initialize repositories
-	sessionRepo := repository.NewSessionRepository(db)
+	sessionRepo := sessions.NewSessionRepository(db)
 
 	// Initialize services
-	sessionService := service.NewSessionService(sessionRepo)
+	sessionService := sessions.NewSessionService(sessionRepo)
 
 	// Initialize handlers
 	sessionsHandler := handler.NewSessionsHandler(sessionService)

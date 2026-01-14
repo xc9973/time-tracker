@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"time-tracker/internal/models"
-	"time-tracker/internal/repository"
+	"time-tracker/internal/sessions/models"
+	"time-tracker/internal/sessions/repository"
 
 	"time-tracker/internal/shared/config"
 	"time-tracker/internal/shared/utils"

@@ -1,6 +1,6 @@
 package service
 
-import "time-tracker/internal/models"
+import "time-tracker/internal/sessions/models"
 
 // SessionServiceInterface defines the interface for session service operations.
 type SessionServiceInterface interface {

@@ -1,6 +1,6 @@
 package repository
 
-import "time-tracker/internal/models"
+import "time-tracker/internal/sessions/models"
 
 // SessionRepositoryInterface defines the interface for session repository operations.
 type SessionRepositoryInterface interface {

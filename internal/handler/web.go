@@ -5,13 +5,13 @@ import (
 	"html/template"
 	"net/http"
 	"time"
-	"time-tracker/internal/service"
+	"time-tracker/internal/sessions"
 
 	"time-tracker/internal/shared/middleware"
 )
 // WebHandler handles HTTP requests for web interface.
 type WebHandler struct {
-	sessionService   *service.SessionService
+	sessionService   *sessions.SessionService
 	sessionsTemplate *template.Template
 	timezone         *time.Location
 	apiKey           string
@@ -47,7 +47,7 @@ type SessionsPageData struct {
 	APIKey         string
 }
 // NewWebHandler creates a new WebHandler.
-func NewWebHandler(sessionSvc *service.SessionService, templatesPath string, tz *time.Location, apiKey string) (*WebHandler, error) {
+func NewWebHandler(sessionSvc *sessions.SessionService, templatesPath string, tz *time.Location, apiKey string) (*WebHandler, error) {
 	sessionsTmpl, err := template.ParseFiles(templatesPath+"/base.html", templatesPath+"/sessions.html")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse sessions template: %w", err)

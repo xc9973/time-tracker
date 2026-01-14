@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"time-tracker/internal/models"
+	"time-tracker/internal/sessions/models"
 
 	"time-tracker/internal/shared/database"
 	"time-tracker/internal/shared/utils"
