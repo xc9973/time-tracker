@@ -1,12 +1,12 @@
-// Package handler provides HTTP handlers for the time tracker API.
-package handler
+package web
+
 import (
 	"fmt"
 	"html/template"
 	"net/http"
 	"time"
-	"time-tracker/internal/sessions"
 
+	"time-tracker/internal/sessions"
 	"time-tracker/internal/shared/middleware"
 )
 // WebHandler handles HTTP requests for web interface.

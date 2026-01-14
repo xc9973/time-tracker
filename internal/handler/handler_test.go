@@ -13,6 +13,7 @@ import (
 	"time-tracker/internal/sessions/models"
 	"time-tracker/internal/shared/database"
 	"time-tracker/internal/shared/errors"
+	"time-tracker/internal/shared/health"
 )
 
 // setupTestDB creates a temporary database for testing.
@@ -46,7 +47,7 @@ func setupTestDB(t *testing.T) (*database.DB, func()) {
 // TestHealthHandler_Check tests GET /healthz endpoint.
 // **Validates: Requirements 6.1, 6.2**
 func TestHealthHandler_Check(t *testing.T) {
-	handler := NewHealthHandler()
+	handler := health.NewHealthHandler()
 
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
@@ -57,7 +58,7 @@ func TestHealthHandler_Check(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", w.Code)
 	}
 
-	var resp HealthResponse
+	var resp health.HealthResponse
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
@@ -68,7 +69,7 @@ func TestHealthHandler_Check(t *testing.T) {
 }
 
 func TestHealthHandler_MethodNotAllowed(t *testing.T) {
-	handler := NewHealthHandler()
+	handler := health.NewHealthHandler()
 
 	req := httptest.NewRequest(http.MethodPost, "/healthz", nil)
 	w := httptest.NewRecorder()

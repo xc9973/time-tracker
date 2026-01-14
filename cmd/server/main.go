@@ -22,6 +22,8 @@ import (
 	"time-tracker/internal/shared/database"
 	"time-tracker/internal/shared/middleware"
 	"time-tracker/internal/sessions"
+	"time-tracker/internal/shared/health"
+	"time-tracker/internal/web"
 )
 
 // Config holds the application configuration loaded from environment variables.
@@ -134,12 +136,12 @@ func main() {
 
 	// Initialize handlers
 	sessionsHandler := handler.NewSessionsHandler(sessionService)
-	healthHandler := handler.NewHealthHandler()
+	healthHandler := health.NewHealthHandler()
 	absTemplates, err := filepath.Abs("templates")
 	if err != nil {
 		log.Fatalf("Failed to resolve templates path: %v", err)
 	}
-	webHandler, err := handler.NewWebHandler(sessionService, absTemplates, tz, cfg.APIKey)
+	webHandler, err := web.NewWebHandler(sessionService, absTemplates, tz, cfg.APIKey)
 	if err != nil {
 		log.Fatalf("Failed to initialize web handler: %v", err)
 	}

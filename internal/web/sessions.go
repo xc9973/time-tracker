@@ -1,4 +1,4 @@
-package handler
+package web
 
 import (
 	"encoding/json"
@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"time-tracker/internal/sessions"
-	"time-tracker/internal/sessions/models"
 
 	"time-tracker/internal/shared/utils"
 	"time-tracker/internal/shared/validation"
@@ -129,7 +128,7 @@ func (h *WebHandler) WebStartSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	startInput := models.SessionStart{
+	startInput := sessions.SessionStart{
 		Category: input.Category,
 		Task:     input.Task,
 		Note:     input.Note,
@@ -156,7 +155,7 @@ func (h *WebHandler) WebStopSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Body is empty for stop from web
-	stopInput := &models.SessionStop{}
+	stopInput := &sessions.SessionStop{}
 
 	_, err := h.sessionService.StopSession(stopInput)
 	if err != nil {
@@ -203,7 +202,7 @@ func (h *WebHandler) WebUpdateSession(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		ID int64 `json:"id"`
-		models.SessionUpdate
+		sessions.SessionUpdate
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
