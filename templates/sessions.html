@@ -1,0 +1,162 @@
+{{template "base" .}}
+{{define "content"}}
+
+<!-- Control Panel -->
+<div class="control-panel" style="background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    {{if .RunningSession}}
+        <div class="running-status" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+            <div style="flex: 1;">
+                <h3 style="margin-bottom: 5px; color: #2c3e50;">正在进行：{{.RunningSession.Category}} - {{.RunningSession.Task}}</h3>
+                {{if .RunningSession.Note}}
+                <p style="color: #666; font-size: 14px; margin-bottom: 5px;">备注：{{.RunningSession.Note}}</p>
+                {{end}}
+                <p style="color: #666; font-size: 14px; margin-bottom: 5px;">开始时间：{{.RunningSession.DisplayStartTime}}</p>
+                <p style="color: #27ae60; font-size: 16px; font-weight: bold; font-family: monospace;">已进行：<span id="timer-display">加载中...</span></p>
+                <input type="hidden" id="running-start-time" value="{{.RunningSession.StartedAt}}">
+            </div>
+            <button id="stopSessionBtn" class="btn" style="background-color: #e74c3c; color: white;">结束计时</button>
+        </div>
+    {{else}}
+        <div class="start-form" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">分类</label>
+                <input type="text" id="startCategory" placeholder="例如：工作" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="flex: 2; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">任务</label>
+                <input type="text" id="startTask" placeholder="例如：写代码" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="flex: 2; min-width: 200px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500;">备注</label>
+                <input type="text" id="startNote" placeholder="可选：添加备注" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <button id="startSessionBtn" class="btn btn-success" style="height: 38px;">开始计时</button>
+        </div>
+    {{end}}
+</div>
+
+<div class="filters">
+    <form method="GET" action="/web/sessions" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; width: 100%;">
+        <label>分类:</label>
+        <input type="text" name="category" value="{{.Category}}" placeholder="输入分类">
+        
+        <label>状态:</label>
+        <select name="status">
+            <option value="" {{if eq .Status ""}}selected{{end}}>全部</option>
+            <option value="running" {{if eq .Status "running"}}selected{{end}}>进行中</option>
+            <option value="stopped" {{if eq .Status "stopped"}}selected{{end}}>已结束</option>
+        </select>
+        
+        <button type="submit" class="btn btn-primary">筛选</button>
+        
+        <a href="/sessions.csv?category={{.Category}}&status={{.Status}}" class="btn btn-success" style="margin-left: auto;">导出 CSV</a>
+    </form>
+</div>
+
+<div class="table-container">
+    {{if .Sessions}}
+    <table>
+        <thead>
+            <tr>
+                <th>开始时间</th>
+                <th>结束时间</th>
+                <th>分类</th>
+                <th>事项</th>
+                <th>备注</th>
+                <th>时长</th>
+                <th>状态</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Sessions}}
+            <tr>
+                <td>{{.DisplayStartTime}}</td>
+                <td>{{if .DisplayEndTime}}{{.DisplayEndTime}}{{else}}(进行中){{end}}</td>
+                <td>{{.Category}}</td>
+                <td>{{.Task}}</td>
+                <td>{{if .Note}}{{.Note}}{{else}}-{{end}}</td>
+                <td>{{if .Duration}}{{.Duration}}{{else}}-{{end}}</td>
+                <td>
+                    {{if eq .Status "running"}}
+                    <span class="status status-running">进行中</span>
+                    {{else}}
+                    <span class="status status-stopped">已结束</span>
+                    {{end}}
+                </td>
+                <td>
+                    <button class="btn btn-edit"
+                        data-id="{{.ID}}"
+                        data-category="{{.Category}}"
+                        data-task="{{.Task}}"
+                        data-note="{{if .Note}}{{.Note}}{{end}}"
+                        data-start="{{.StartedAt}}"
+                        data-end="{{if .EndedAt}}{{.EndedAt}}{{end}}"
+                        style="background-color: #3498db; color: white; padding: 2px 6px; font-size: 12px; margin-right: 5px;">编辑</button>
+                    <button class="btn btn-delete" data-id="{{.ID}}" style="background-color: #e74c3c; color: white; padding: 2px 6px; font-size: 12px;">删除</button>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <div class="empty-state">
+        <p>暂无计时记录</p>
+    </div>
+    {{end}}
+</div>
+
+{{if .Sessions}}
+<div class="pagination">
+    {{if gt .CurrentPage 1}}
+    <a href="/web/sessions?category={{.Category}}&status={{.Status}}&page={{.PrevPage}}">上一页</a>
+    {{else}}
+    <a class="disabled">上一页</a>
+    {{end}}
+    
+    <span>第 {{.CurrentPage}} 页 / 共 {{.TotalPages}} 页（每页 10 条）</span>
+    
+    {{if lt .CurrentPage .TotalPages}}
+    <a href="/web/sessions?category={{.Category}}&status={{.Status}}&page={{.NextPage}}">下一页</a>
+    {{else}}
+    <a class="disabled">下一页</a>
+    {{end}}
+</div>
+{{end}}
+
+<!-- Edit Modal -->
+<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 20px; border-radius: 8px; width: 90%; max-width: 500px;">
+        <h3 style="margin-top: 0;">编辑记录</h3>
+        <input type="hidden" id="editId">
+
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">分类</label>
+            <input type="text" id="editCategory" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">任务</label>
+            <input type="text" id="editTask" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">备注</label>
+            <textarea id="editNote" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">开始时间</label>
+            <input type="datetime-local" id="editStart" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px;">结束时间</label>
+            <input type="datetime-local" id="editEnd" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <small style="color: #666;">置空表示正在进行中</small>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button id="cancelEditBtn" class="btn" style="background: #95a5a6; color: white;">取消</button>
+            <button id="saveEditBtn" class="btn btn-primary">保存</button>
+        </div>
+    </div>
+</div>
+
+{{end}}

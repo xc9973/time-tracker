@@ -1,0 +1,18 @@
+
+
+services:
+  app:
+    build: .
+    container_name: time-tracker
+    restart: unless-stopped
+    volumes:
+      - /vol1/1000/docker/timejl/data:/data
+      - /vol1/1000/docker/timejl/templates:/app/templates 
+    env_file:
+      - .env
+    environment:
+      - TIMELOG_DB_PATH=/data/timelog.db
+      - TIMELOG_PORT=7070
+    ports:
+      # Map host port 7070 to container port 7070
+      - "7070:7070"

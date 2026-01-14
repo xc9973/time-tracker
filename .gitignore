@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+
+# Local secrets / env
+.env
+env
+env_vscode.txt
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# Build artifacts
+/server
+*.exe
+*.out
+
+# Test artifacts
+**/testdata/rapid/**/*.fail
+
+# Editor / tooling
+.vscode/
+.mcp.json
+.claude/
