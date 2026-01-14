@@ -24,3 +24,18 @@ func (s *TagService) List() ([]Tag, error) {
 func (s *TagService) Get(id int64) (*Tag, error) {
 	return s.repo.GetByID(id)
 }
+
+// AssignToSession assigns tags to a session
+func (s *TagService) AssignToSession(sessionID int64, tagIDs []int64) error {
+	return s.repo.AssignToSession(sessionID, tagIDs)
+}
+
+// RemoveFromSession removes a tag from a session
+func (s *TagService) RemoveFromSession(sessionID, tagID int64) error {
+	return s.repo.RemoveFromSession(sessionID, tagID)
+}
+
+// ListForSession returns all tags for a session
+func (s *TagService) ListForSession(sessionID int64) ([]Tag, error) {
+	return s.repo.ListForSession(sessionID)
+}

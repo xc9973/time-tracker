@@ -64,3 +64,64 @@ func (r *TagRepository) List() ([]Tag, error) {
 
 	return out, nil
 }
+
+func (r *TagRepository) AssignToSession(sessionID int64, tagIDs []int64) error {
+	for _, tagID := range tagIDs {
+		_, err := r.db.Exec(
+			`INSERT OR IGNORE INTO session_tags (session_id, tag_id) VALUES (?, ?)`,
+			sessionID, tagID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to assign tag %d to session %d: %w", tagID, sessionID, err)
+		}
+	}
+	return nil
+}
+
+func (r *TagRepository) RemoveFromSession(sessionID, tagID int64) error {
+	res, err := r.db.Exec(
+		`DELETE FROM session_tags WHERE session_id = ? AND tag_id = ?`,
+		sessionID, tagID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to remove tag %d from session %d: %w", tagID, sessionID, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check remove result: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("session-tag association not found")
+	}
+
+	return nil
+}
+
+func (r *TagRepository) ListForSession(sessionID int64) ([]Tag, error) {
+	rows, err := r.db.Query(
+		`SELECT t.id, t.name, t.color, t.created_at
+			FROM tags t
+			INNER JOIN session_tags st ON st.tag_id = t.id
+			WHERE st.session_id = ?
+			ORDER BY t.name ASC`,
+		sessionID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query session tags: %w", err)
+	}
+	defer rows.Close()
+
+	out := []Tag{}
+	for rows.Next() {
+		var t Tag
+		if err := rows.Scan(&t.ID, &t.Name, &t.Color, &t.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan session tag: %w", err)
+		}
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("tags rows error: %w", err)
+	}
+	return out, nil
+}

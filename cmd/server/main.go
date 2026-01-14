@@ -177,8 +177,13 @@ func main() {
 		path := r.URL.Path
 
 		switch {
+		// Session-tags association endpoints go to tags handler
+		case strings.HasPrefix(path, "/api/v1/sessions/") && (strings.HasSuffix(path, "/tags") || strings.Contains(path, "/tags/")):
+			tagsHandler.ServeHTTP(w, r)
+		// Other sessions endpoints
 		case strings.HasPrefix(path, "/api/v1/sessions"):
 			sessionsHandler.ServeHTTP(w, r)
+		// Tags endpoints
 		case strings.HasPrefix(path, "/api/v1/tags"):
 			tagsHandler.ServeHTTP(w, r)
 		default:
