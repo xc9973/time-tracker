@@ -23,6 +23,7 @@ import (
 	"time-tracker/internal/shared/middleware"
 	"time-tracker/internal/sessions"
 	"time-tracker/internal/shared/health"
+	"time-tracker/internal/tags"
 	"time-tracker/internal/web"
 )
 
@@ -136,6 +137,9 @@ func main() {
 
 	// Initialize handlers
 	sessionsHandler := handler.NewSessionsHandler(sessionService)
+	tagsRepo := tags.NewTagRepository(db)
+	tagsService := tags.NewTagService(tagsRepo)
+	tagsHandler := tags.NewTagsHandler(tagsService)
 	healthHandler := health.NewHealthHandler()
 	absTemplates, err := filepath.Abs("templates")
 	if err != nil {
@@ -175,6 +179,8 @@ func main() {
 		switch {
 		case strings.HasPrefix(path, "/api/v1/sessions"):
 			sessionsHandler.ServeHTTP(w, r)
+		case strings.HasPrefix(path, "/api/v1/tags"):
+			tagsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
