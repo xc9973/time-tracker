@@ -88,6 +88,46 @@ func (db *DB) initTables() error {
 		}
 	}
 
+	tagsTableSQL := `
+	CREATE TABLE IF NOT EXISTS tags (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE,
+		color TEXT NOT NULL DEFAULT '#6B7280',
+		created_at TEXT NOT NULL
+	);`
+
+	if _, err := db.Exec(tagsTableSQL); err != nil {
+		return fmt.Errorf("failed to create tags table: %w", err)
+	}
+
+	if _, err := db.Exec("CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);"); err != nil {
+		return fmt.Errorf("failed to create tags index: %w", err)
+	}
+
+	sessionTagsTableSQL := `
+	CREATE TABLE IF NOT EXISTS session_tags (
+		session_id INTEGER NOT NULL,
+		tag_id INTEGER NOT NULL,
+		PRIMARY KEY (session_id, tag_id),
+		FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+		FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+	);`
+
+	if _, err := db.Exec(sessionTagsTableSQL); err != nil {
+		return fmt.Errorf("failed to create session_tags table: %w", err)
+	}
+
+	sessionTagsIndexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_session_tags_session ON session_tags(session_id);",
+		"CREATE INDEX IF NOT EXISTS idx_session_tags_tag ON session_tags(tag_id);",
+	}
+
+	for _, idx := range sessionTagsIndexes {
+		if _, err := db.Exec(idx); err != nil {
+			return fmt.Errorf("failed to create session_tags index: %w", err)
+		}
+	}
+
 	return nil
 }
 
